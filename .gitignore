@@ -6,3 +6,4 @@ artifacts/
 TestResults/
 __pycache__/
 *.pyc
+node_modules/

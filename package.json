@@ -1,0 +1,11 @@
+{
+  "name": "jellyfin-space-saver-ui-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/configPage.test.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "29.1.1"
+  }
+}

@@ -20,18 +20,18 @@ The URL starts working only after a successful **Publish plugin** workflow run. 
 
 1. Commit and push this folder, including `.github/workflows/release.yml` and the scripts, to [18swenskiq/jellyfin_encoder](https://github.com/18swenskiq/jellyfin_encoder). Build outputs and NuGet caches are ignored and should not be committed.
 2. On GitHub, open **Actions → Publish plugin → Run workflow**, select `main`, then run it. The workflow must be on the default branch for this button to appear. It uses the built-in `GITHUB_TOKEN`; no personal token or repository secret is required. Repository/organization rules must allow Actions to write releases.
-3. Wait for the workflow to finish. It builds and tests the plugin, creates the `v0.1.0.0` release, and publishes its ZIP, `manifest.json`, and `SHA256SUMS`. The workflow summary includes the Jellyfin repository URL.
+3. Wait for the workflow to finish. It builds and tests the plugin, creates a release matching the version in `meta.json` (currently `v0.1.1.0`), and publishes its ZIP, `manifest.json`, and `SHA256SUMS`. The workflow summary includes the Jellyfin repository URL.
 4. Add that URL in Jellyfin as described above.
 
 The catalog manifest is generated from `meta.json` and the actual release ZIP; **`meta.json` itself is not the repository manifest**. Jellyfin requires an MD5 checksum of the ZIP, and the workflow also publishes SHA-256 for independent verification. A draft release holds all assets until upload succeeds, then becomes the latest stable release. Older catalog entries are carried forward so servers can still find compatible versions.
 
-For each update, increment the four-part version in both `meta.json` and `Jellyfin.Plugin.SpaceSaver/Jellyfin.Plugin.SpaceSaver.csproj`, push your changes, and run **Publish plugin** again. Alternatively, push a matching tag, for example `v0.1.1.0`, to trigger it. Keep the plugin GUID unchanged. If you change the Jellyfin package references, update `targetAbi` to match. Published versions cannot be overwritten; use a new version. A failed asset upload leaves a draft that can be retried from the same commit. Do not publish unrelated stable releases without a catalog manifest in this repository, since they would replace the `latest` link.
+For each update, increment the four-part version in both `meta.json` and `Jellyfin.Plugin.SpaceSaver/Jellyfin.Plugin.SpaceSaver.csproj`, push your changes, and run **Publish plugin** again. Alternatively, push a matching tag, for example `v0.1.2.0`, to trigger it. Keep the plugin GUID unchanged. If you change the Jellyfin package references, update `targetAbi` to match. Published versions cannot be overwritten; use a new version. A failed asset upload leaves a draft that can be retried from the same commit. Do not publish unrelated stable releases without a catalog manifest in this repository, since they would replace the `latest` link.
 
 ## Install the packaged plugin manually
 
-The local build is in `artifacts/SpaceSaver_0.1.0.0.zip`. It contains the plugin DLL and `meta.json`; do not install Jellyfin's own dependency DLLs from NuGet alongside it.
+The local build is in `artifacts/SpaceSaver_0.1.1.0.zip`. It contains the plugin DLL and `meta.json`; do not install Jellyfin's own dependency DLLs from NuGet alongside it.
 
-1. Extract the ZIP into a directory named `SpaceSaver_0.1.0.0` beneath your server's **plugins directory**, in its persistent configuration/data volume. The official image commonly uses `/config/plugins`; installations with a different `JELLYFIN_DATA_DIR` may use a different directory. Check your existing plugin folders / server startup paths first.
+1. Extract the ZIP into a directory named `SpaceSaver_0.1.1.0` beneath your server's **plugins directory**, in its persistent configuration/data volume. The official image commonly uses `/config/plugins`; installations with a different `JELLYFIN_DATA_DIR` may use a different directory. Check your existing plugin folders / server startup paths first.
 2. Restart the Jellyfin container.
 3. Open Space Saver in the plugin settings, save the encoder/device settings, and click **Test GPU**.
 4. Convert a representative file, check playback and track selection, then click **Delete original backup** for that job to reclaim the space. This final action is permanent and has an explicit confirmation.
@@ -39,8 +39,8 @@ The local build is in `artifacts/SpaceSaver_0.1.0.0.zip`. It contains the plugin
 Example when the container is named `jellyfin` and its plugin directory is `/config/plugins`:
 
 ```sh
-unzip SpaceSaver_0.1.0.0.zip -d SpaceSaver_0.1.0.0
-docker cp SpaceSaver_0.1.0.0 jellyfin:/config/plugins/
+unzip SpaceSaver_0.1.1.0.zip -d SpaceSaver_0.1.1.0
+docker cp SpaceSaver_0.1.1.0 jellyfin:/config/plugins/
 docker restart jellyfin
 ```
 
@@ -100,6 +100,12 @@ Job history is stored under `<Jellyfin data directory>/spacesaver/jobs.json`. Qu
 
 Stop conversions and inspect those paths before manual recovery. If the original source is missing but its `.spacesaver-original` exists, move the backup back to the original name. If a converted output already exists, move that output aside first; do not overwrite either file blindly. Restore the original extension when rolling back a container change. Remove an abandoned temporary file only after verifying the original is present, then rescan the library. A crash during backup deletion may leave an interrupted job even if deletion finished; check the listed files. Do not edit the journal while Jellyfin is running.
 
+## Page loading fix in 0.1.1.0
+
+Version 0.1.0.0 used an AMD controller wrapper, but Jellyfin 10.11 loads plugin controllers as ES modules. This produced `define is not defined` and prevented all page API requests. The hardware-decoding checkbox also lacked the label span required by Jellyfin's custom element, causing a `classList` error. Version 0.1.1.0 fixes both, adds debounced search as you type, preserves search changes made while a request is in progress, and displays API failures on the page.
+
+Publish 0.1.1.0, update the plugin in Jellyfin, restart the server, and hard-refresh the browser to replace the cached controller. The release workflow now runs DOM regression tests for controller initialization, checkbox markup, media loading, search, sorting, conversion queueing, and visible request errors before publishing.
+
 ## Build and verify
 
 Requires a .NET SDK supporting `net9.0` (9 or newer), and FFmpeg/FFprobe on PATH for integration checks.
@@ -108,6 +114,8 @@ Requires a .NET SDK supporting `net9.0` (9 or newer), and FFmpeg/FFprobe on PATH
 dotnet build Jellyfin.Plugin.SpaceSaver/Jellyfin.Plugin.SpaceSaver.csproj -c Release
 dotnet run --project tests/SpaceSaver.Tests.csproj -c Release
 node --check Jellyfin.Plugin.SpaceSaver/Configuration/configPage.js
+npm ci --ignore-scripts
+npm test
 ```
 
 Package with `pwsh -File scripts/package.ps1` on Windows or `sh scripts/package.sh` on Linux (requires Python 3). Both generate the ZIP, `manifest.json`, and `SHA256SUMS` under `artifacts/`. A locally generated manifest points to the future GitHub release; it is not usable until those release assets are published. Validate packaging/publication logic with `python -m unittest discover -s tests -p 'test_release*.py' -v`; publication tests use mocked GitHub calls and never create releases.
