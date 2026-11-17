@@ -1,0 +1,47 @@
+name: Publish plugin
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spacesaver-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '9.0.x'
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install FFmpeg for preservation tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      - name: Validate packaging and publication
+        run: python -m unittest discover -s tests -p 'test_release*.py' -v
+      - name: Build and verify media preservation
+        run: |
+          dotnet build Jellyfin.Plugin.SpaceSaver/Jellyfin.Plugin.SpaceSaver.csproj -c Release
+          dotnet run --project tests/SpaceSaver.Tests.csproj -c Release
+          node --check Jellyfin.Plugin.SpaceSaver/Configuration/configPage.js
+      - name: Publish ZIP and Jellyfin catalog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/publish_release.py

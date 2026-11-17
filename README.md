@@ -4,7 +4,30 @@ A Jellyfin **10.11.8** plugin for converting local library videos to **H.265 / H
 
 Open **Dashboard → Plugins → Space Saver → Settings** (also exposed as a menu page). Browse non-HEVC files, search, sort by file size/name/codec, and convert one file or a selection. The queue runs one encode at a time and shows progress, errors, cancellation, original/output sizes, and backup paths.
 
-## Install the packaged plugin
+## Install from the Jellyfin catalog
+
+After the first GitHub release is published, add this repository URL in **Dashboard → Plugins → Repositories → Add**:
+
+```text
+https://github.com/18swenskiq/jellyfin_encoder/releases/latest/download/manifest.json
+```
+
+Give it a name such as **Space Saver**, save it, then find **Space Saver** in the **Catalog**, install it, and restart Jellyfin. Open the plugin settings and run **Test GPU**. Later releases are available through Jellyfin's plugin update mechanism using the same repository URL. GPU device access and writable media mounts are still required; see below.
+
+The URL starts working only after a successful **Publish plugin** workflow run. GitHub Pages and custom GitHub credentials in Jellyfin are not needed. The GitHub repository must be public.
+
+## Publish the first GitHub release
+
+1. Commit and push this folder, including `.github/workflows/release.yml` and the scripts, to [18swenskiq/jellyfin_encoder](https://github.com/18swenskiq/jellyfin_encoder). Build outputs and NuGet caches are ignored and should not be committed.
+2. On GitHub, open **Actions → Publish plugin → Run workflow**, select `main`, then run it. The workflow must be on the default branch for this button to appear. It uses the built-in `GITHUB_TOKEN`; no personal token or repository secret is required. Repository/organization rules must allow Actions to write releases.
+3. Wait for the workflow to finish. It builds and tests the plugin, creates the `v0.1.0.0` release, and publishes its ZIP, `manifest.json`, and `SHA256SUMS`. The workflow summary includes the Jellyfin repository URL.
+4. Add that URL in Jellyfin as described above.
+
+The catalog manifest is generated from `meta.json` and the actual release ZIP; **`meta.json` itself is not the repository manifest**. Jellyfin requires an MD5 checksum of the ZIP, and the workflow also publishes SHA-256 for independent verification. A draft release holds all assets until upload succeeds, then becomes the latest stable release. Older catalog entries are carried forward so servers can still find compatible versions.
+
+For each update, increment the four-part version in both `meta.json` and `Jellyfin.Plugin.SpaceSaver/Jellyfin.Plugin.SpaceSaver.csproj`, push your changes, and run **Publish plugin** again. Alternatively, push a matching tag, for example `v0.1.1.0`, to trigger it. Keep the plugin GUID unchanged. If you change the Jellyfin package references, update `targetAbi` to match. Published versions cannot be overwritten; use a new version. A failed asset upload leaves a draft that can be retried from the same commit. Do not publish unrelated stable releases without a catalog manifest in this repository, since they would replace the `latest` link.
+
+## Install the packaged plugin manually
 
 The local build is in `artifacts/SpaceSaver_0.1.0.0.zip`. It contains the plugin DLL and `meta.json`; do not install Jellyfin's own dependency DLLs from NuGet alongside it.
 
@@ -87,6 +110,6 @@ dotnet run --project tests/SpaceSaver.Tests.csproj -c Release
 node --check Jellyfin.Plugin.SpaceSaver/Configuration/configPage.js
 ```
 
-Package with `pwsh -File scripts/package.ps1` on Windows or `sh scripts/package.sh` on Linux (requires `zip`).
+Package with `pwsh -File scripts/package.ps1` on Windows or `sh scripts/package.sh` on Linux (requires Python 3). Both generate the ZIP, `manifest.json`, and `SHA256SUMS` under `artifacts/`. A locally generated manifest points to the future GitHub release; it is not usable until those release assets are published. Validate packaging/publication logic with `python -m unittest discover -s tests -p 'test_release*.py' -v`; publication tests use mocked GitHub calls and never create releases.
 
 The test executable validates command construction and rejection rules, administrator policy, safe replacement/rollback, cancellation, and real MKV/MP4 transcodes with multiple audio tracks, forced subtitles and chapters (plus an MKV attachment). Audio/subtitle packet hashes are compared before and after. Integration tests replace only GPU-specific encoding options with software x265 so they run without a GPU; they do **not** certify hardware compatibility. Generated fixtures stay under `artifacts/test-media` for inspection.

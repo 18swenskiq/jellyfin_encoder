@@ -4,3 +4,5 @@ artifacts/
 .dotnet/
 .nuget/
 TestResults/
+__pycache__/
+*.pyc
