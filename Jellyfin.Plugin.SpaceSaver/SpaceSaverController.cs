@@ -10,14 +10,10 @@ namespace Jellyfin.Plugin.SpaceSaver;
 public sealed class SpaceSaverController(MediaCatalog catalog, ConversionService conversions) : ControllerBase
 {
     [HttpGet("Media")]
-    public ActionResult<object> Media([FromQuery] string sort = "size", [FromQuery] bool descending = true,
-        [FromQuery] string? search = null, [FromQuery] int start = 0, [FromQuery] int limit = 100)
+    public async Task<ActionResult<MediaPage>> Media([FromQuery] string sort = "size", [FromQuery] bool descending = true,
+        [FromQuery] string? search = null, [FromQuery] int start = 0, [FromQuery] int limit = 100, CancellationToken token = default)
     {
-        IEnumerable<MediaRow> rows = catalog.List();
-        if (!string.IsNullOrWhiteSpace(search)) rows = rows.Where(r => r.Name.Contains(search, StringComparison.OrdinalIgnoreCase) || r.Path.Contains(search, StringComparison.OrdinalIgnoreCase));
-        var all = rows.ToArray();
-        rows = sort switch { "name" => descending ? all.OrderByDescending(r => r.Name) : all.OrderBy(r => r.Name), "codec" => descending ? all.OrderByDescending(r => r.Codec) : all.OrderBy(r => r.Codec), _ => descending ? all.OrderByDescending(r => r.Size) : all.OrderBy(r => r.Size) };
-        return Ok(new { Items = rows.Skip(Math.Max(0, start)).Take(Math.Clamp(limit, 1, 500)), TotalCount = all.Length, TotalBytes = all.Sum(r => r.Size) });
+        return Ok(await catalog.List(sort, descending, search, start, limit, token).ConfigureAwait(false));
     }
     [HttpGet("Jobs")]
     public ActionResult<ConversionJob[]> Jobs() => conversions.List();

@@ -51,7 +51,7 @@ export default function SpaceSaverController(view) {
             var data = await api('Media?' + query.toString());
             if (!active || request !== mediaGeneration) return;
             total = data.totalCount;
-            $('ssSummary').textContent = total + ' files · ' + bytes(data.totalBytes) + ' total source size';
+            $('ssSummary').textContent = total + ' files · ' + bytes(data.totalBytes) + ' known source size';
             $('ssMedia').replaceChildren(); $('ssAll').checked = false;
             data.items.forEach(function (item) {
                 var row = element('tr'); row.style.borderBottom = '1px solid #7775';
@@ -61,7 +61,7 @@ export default function SpaceSaverController(view) {
                 var action = element('td');
                 if (item.blockedReason) action.textContent = item.blockedReason;
                 else action.append(button('Convert', async function () { await api('Jobs/' + item.id, 'POST'); toast('Queued ' + item.name); await loadJobs(); }));
-                row.append(checkCell, nameCell, element('td', item.codec), element('td', bytes(item.size)), action); $('ssMedia').append(row);
+                row.append(checkCell, nameCell, element('td', item.codec), element('td', item.size > 0 ? bytes(item.size) : 'Unknown'), action); $('ssMedia').append(row);
             });
             $('ssPrevious').disabled = start === 0; $('ssNext').disabled = start + limit >= total;
             $('ssPage').textContent = total ? (start + 1) + '–' + Math.min(start + limit, total) + ' of ' + total : 'No matching files';

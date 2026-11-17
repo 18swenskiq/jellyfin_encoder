@@ -14,6 +14,7 @@ void Reject(Action action, string name)
     throw new Exception("FAILED (not rejected): " + name);
 }
 var config = new PluginConfiguration();
+await CatalogTests.Run(Check);
 EncodingPlan.ValidateSettings(config);
 Check(MediaCatalog.IsHevc("HEVC") && MediaCatalog.IsHevc("h265") && !MediaCatalog.IsHevc("h264"), "HEVC aliases and H.264 filtering");
 foreach (var device in new[] { "/tmp/test", "/dev/dri/renderD", "/dev/dri/renderD128,driver=bad", "/dev/dri/renderD128;touch" })

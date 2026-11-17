@@ -20,18 +20,18 @@ The URL starts working only after a successful **Publish plugin** workflow run. 
 
 1. Commit and push this folder, including `.github/workflows/release.yml` and the scripts, to [18swenskiq/jellyfin_encoder](https://github.com/18swenskiq/jellyfin_encoder). Build outputs and NuGet caches are ignored and should not be committed.
 2. On GitHub, open **Actions → Publish plugin → Run workflow**, select `main`, then run it. The workflow must be on the default branch for this button to appear. It uses the built-in `GITHUB_TOKEN`; no personal token or repository secret is required. Repository/organization rules must allow Actions to write releases.
-3. Wait for the workflow to finish. It builds and tests the plugin, creates a release matching the version in `meta.json` (currently `v0.1.1.0`), and publishes its ZIP, `manifest.json`, and `SHA256SUMS`. The workflow summary includes the Jellyfin repository URL.
+3. Wait for the workflow to finish. It builds and tests the plugin, creates a release matching the version in `meta.json` (currently `v0.1.2.0`), and publishes its ZIP, `manifest.json`, and `SHA256SUMS`. The workflow summary includes the Jellyfin repository URL.
 4. Add that URL in Jellyfin as described above.
 
 The catalog manifest is generated from `meta.json` and the actual release ZIP; **`meta.json` itself is not the repository manifest**. Jellyfin requires an MD5 checksum of the ZIP, and the workflow also publishes SHA-256 for independent verification. A draft release holds all assets until upload succeeds, then becomes the latest stable release. Older catalog entries are carried forward so servers can still find compatible versions.
 
-For each update, increment the four-part version in both `meta.json` and `Jellyfin.Plugin.SpaceSaver/Jellyfin.Plugin.SpaceSaver.csproj`, push your changes, and run **Publish plugin** again. Alternatively, push a matching tag, for example `v0.1.2.0`, to trigger it. Keep the plugin GUID unchanged. If you change the Jellyfin package references, update `targetAbi` to match. Published versions cannot be overwritten; use a new version. A failed asset upload leaves a draft that can be retried from the same commit. Do not publish unrelated stable releases without a catalog manifest in this repository, since they would replace the `latest` link.
+For each update, increment the four-part version in both `meta.json` and `Jellyfin.Plugin.SpaceSaver/Jellyfin.Plugin.SpaceSaver.csproj`, push your changes, and run **Publish plugin** again. Alternatively, push a matching tag, for example `v0.1.3.0`, to trigger it. Keep the plugin GUID unchanged. If you change the Jellyfin package references, update `targetAbi` to match. Published versions cannot be overwritten; use a new version. A failed asset upload leaves a draft that can be retried from the same commit. Do not publish unrelated stable releases without a catalog manifest in this repository, since they would replace the `latest` link.
 
 ## Install the packaged plugin manually
 
-The local build is in `artifacts/SpaceSaver_0.1.1.0.zip`. It contains the plugin DLL and `meta.json`; do not install Jellyfin's own dependency DLLs from NuGet alongside it.
+The local build is in `artifacts/SpaceSaver_0.1.2.0.zip`. It contains the plugin DLL and `meta.json`; do not install Jellyfin's own dependency DLLs from NuGet alongside it.
 
-1. Extract the ZIP into a directory named `SpaceSaver_0.1.1.0` beneath your server's **plugins directory**, in its persistent configuration/data volume. The official image commonly uses `/config/plugins`; installations with a different `JELLYFIN_DATA_DIR` may use a different directory. Check your existing plugin folders / server startup paths first.
+1. Extract the ZIP into a directory named `SpaceSaver_0.1.2.0` beneath your server's **plugins directory**, in its persistent configuration/data volume. The official image commonly uses `/config/plugins`; installations with a different `JELLYFIN_DATA_DIR` may use a different directory. Check your existing plugin folders / server startup paths first.
 2. Restart the Jellyfin container.
 3. Open Space Saver in the plugin settings, save the encoder/device settings, and click **Test GPU**.
 4. Convert a representative file, check playback and track selection, then click **Delete original backup** for that job to reclaim the space. This final action is permanent and has an explicit confirmation.
@@ -39,8 +39,8 @@ The local build is in `artifacts/SpaceSaver_0.1.1.0.zip`. It contains the plugin
 Example when the container is named `jellyfin` and its plugin directory is `/config/plugins`:
 
 ```sh
-unzip SpaceSaver_0.1.1.0.zip -d SpaceSaver_0.1.1.0
-docker cp SpaceSaver_0.1.1.0 jellyfin:/config/plugins/
+unzip SpaceSaver_0.1.2.0.zip -d SpaceSaver_0.1.2.0
+docker cp SpaceSaver_0.1.2.0 jellyfin:/config/plugins/
 docker restart jellyfin
 ```
 
@@ -90,7 +90,7 @@ The GPU test performs a short HEVC encode through the chosen render device. It p
 
 ## Current limits
 
-HDR / Dolby Vision, detected embedded video closed captions, interlaced video, non-4:2:0 pixel formats, multi-angle video, multi-part items, and source-file symlinks are rejected rather than converted with unverified presentation changes. AV1 and VP9 appear because they are not HEVC, but converting already efficient codecs may save nothing. The library list uses Jellyfin's stored codec information; each conversion re-probes the actual source before encoding. Missing/offline/remote files and disc directories are excluded.
+HDR / Dolby Vision, detected embedded video closed captions, interlaced video, non-4:2:0 pixel formats, multi-angle video, multi-part items, and source-file symlinks are rejected rather than converted with unverified presentation changes. AV1 and VP9 appear because they are not HEVC, but converting already efficient codecs may save nothing. The list uses Jellyfin's stored codec and size metadata; each conversion re-probes the actual source before encoding. Remote URLs and `.strm` links are excluded. Offline/missing paths may still appear in the cached catalog but cannot be queued; no media filesystem calls are made while browsing. Duplicate library entries for the same path can appear separately; the conversion queue prevents simultaneous duplicate jobs for that path.
 
 This is a first implementation. It has been compiled against 10.11.8 and exercised with generated MKV/MP4 media on the development host. The actual Linux Intel GPU path and Jellyfin web UI still require validation in your container. Hardware flags follow QSV/VA-API device derivation; GPU generation, drivers and Jellyfin FFmpeg builds can affect support. Filesystem durability semantics vary, especially on network storage; retained originals are a recovery aid, not a substitute for independent backups.
 
@@ -105,6 +105,14 @@ Stop conversions and inspect those paths before manual recovery. If the original
 Version 0.1.0.0 used an AMD controller wrapper, but Jellyfin 10.11 loads plugin controllers as ES modules. This produced `define is not defined` and prevented all page API requests. The hardware-decoding checkbox also lacked the label span required by Jellyfin's custom element, causing a `classList` error. Version 0.1.1.0 fixes both, adds debounced search as you type, preserves search changes made while a request is in progress, and displays API failures on the page.
 
 Publish 0.1.1.0, update the plugin in Jellyfin, restart the server, and hard-refresh the browser to replace the cached controller. The release workflow now runs DOM regression tests for controller initialization, checkbox markup, media loading, search, sorting, conversion queueing, and visible request errors before publishing.
+
+## Catalog performance fix in 0.1.2.0
+
+Earlier versions loaded every library video, queried its codec separately, and checked the file on disk before sorting and returning a page. This could take minutes on large libraries or network storage, and repeated for every search and page change.
+
+Version 0.1.2.0 reads Jellyfin 10.11's database through its registered EF context factory. It performs read-only SQL filtering, sorting and pagination using cached metadata: one aggregate query for count/known bytes and one query for the requested page (at most 500 rows). Empty results need only the aggregate query. It does not load complete library entities or inspect media files. Request cancellation is forwarded to the queries, and the server log records the returned row count and elapsed milliseconds. No database schema or indexes are changed.
+
+Sizes reflect the most recent library scan; unknown sizes display as **Unknown**, contribute zero to the known-byte total, and sort as zero. Run a Jellyfin library scan to refresh stale metadata. Conversion preflight still validates the selected file. A SQLite regression fixture with 5,012 entries verifies query count, pagination, filtering, totals, search, and cancellation; its timings are a development check rather than a guarantee for a production server.
 
 ## Build and verify
 
