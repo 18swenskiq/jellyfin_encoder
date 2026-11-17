@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html><head><title>Space Saver</title></head><body>
+<div id="SpaceSaverPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="__plugin/SpaceSaver.js">
+  <div data-role="content"><div class="content-primary">
+    <h1>Space Saver</h1>
+    <p>Find large videos and convert them to H.265 using your Intel GPU. Audio, subtitles, attachments and chapters are copied; originals are retained until you delete their backups.</p>
+    <p id="ssError" role="alert" style="color:#ff8989;white-space:pre-wrap"></p>
+    <details><summary>Encoding settings &amp; GPU diagnostics</summary>
+      <form id="ssSettings" style="max-width:42em;margin-top:1.5em">
+        <div class="selectContainer"><label class="selectLabel" for="ssBackend">Hardware encoder</label><select is="emby-select" id="ssBackend"><option value="qsv">Intel Quick Sync (QSV)</option><option value="vaapi">VA-API (Intel / AMD on Linux)</option></select></div>
+        <div class="inputContainer"><label class="inputLabel" for="ssDevice">GPU render device inside the container</label><input is="emby-input" id="ssDevice" required pattern="/dev/dri/renderD[0-9]+" value="/dev/dri/renderD128" /></div>
+        <div class="inputContainer"><label class="inputLabel" for="ssQuality">Quality (1–51; lower means higher quality / larger files)</label><input is="emby-input" type="number" id="ssQuality" min="1" max="51" value="24" required /></div>
+        <div class="inputContainer"><label class="inputLabel" for="ssSavings">Minimum savings (%)</label><input is="emby-input" type="number" id="ssSavings" min="0" max="90" value="5" required /></div>
+        <label><input is="emby-checkbox" type="checkbox" id="ssDecode" checked /> Use hardware decoding as well as encoding</label>
+        <p>If a source codec cannot be decoded by your GPU, disable hardware decoding to use CPU decoding with GPU encoding. No automatic software fallback is performed.</p>
+        <p>Video re-encoding is lossy. Start with one representative file. HDR, Dolby Vision, interlaced and multi-angle videos are currently rejected to protect their presentation.</p>
+        <button is="emby-button" type="submit" class="raised button-submit">Save settings</button>
+        <button is="emby-button" id="ssTest" type="button" class="raised">Test GPU (saved settings)</button>
+        <pre id="ssCapabilities" style="white-space:pre-wrap"></pre>
+      </form>
+    </details>
+    <h2>Non-HEVC media</h2>
+    <div style="display:flex;gap:1em;flex-wrap:wrap;align-items:end">
+      <div class="inputContainer"><label for="ssSearch">Search name or path</label><input is="emby-input" id="ssSearch" type="search" /></div>
+      <div class="selectContainer"><label for="ssSort">Sort by</label><select is="emby-select" id="ssSort"><option value="size">File size</option><option value="name">Name</option><option value="codec">Codec</option></select></div>
+      <div class="selectContainer"><label for="ssDirection">Order</label><select is="emby-select" id="ssDirection"><option value="true">Descending</option><option value="false">Ascending</option></select></div>
+      <button is="emby-button" type="button" id="ssRefresh" class="raised">Refresh list</button>
+      <button is="emby-button" type="button" id="ssQueue" class="raised button-submit">Convert selected</button>
+    </div>
+    <p id="ssSummary" role="status"></p>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;text-align:left"><thead><tr><th><input id="ssAll" type="checkbox" aria-label="Select this page" /></th><th>Name / path</th><th>Codec</th><th>Size</th><th>Action</th></tr></thead><tbody id="ssMedia"></tbody></table></div>
+    <div style="display:flex;gap:1em;margin-top:1em"><button is="emby-button" id="ssPrevious" type="button" class="raised">Previous</button><span id="ssPage"></span><button is="emby-button" id="ssNext" type="button" class="raised">Next</button></div>
+    <h2>Conversion queue</h2>
+    <p>One conversion runs at a time. Completed jobs retain an original backup, so disk space is reclaimed only after you review playback and delete that backup. Deletion is permanent.</p>
+    <div id="ssJobs" aria-live="polite"></div>
+  </div></div>
+</div>
+</body></html>

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version>0.1.0.0</Version>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Jellyfin.Controller" Version="10.11.8" ExcludeAssets="runtime" />
+    <PackageReference Include="Jellyfin.Model" Version="10.11.8" ExcludeAssets="runtime" />
+    <EmbeddedResource Include="Configuration/configPage.html" />
+    <EmbeddedResource Include="Configuration/configPage.js" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,10 @@
+{
+  "category": "General",
+  "description": "Convert library videos to HEVC with Intel QSV or VA-API, preserve tracks, and retain recoverable originals.",
+  "guid": "e6f799fe-5693-4b68-95af-a7010949adeb",
+  "name": "Space Saver",
+  "overview": "GPU-assisted media space savings",
+  "owner": "Space Saver contributors",
+  "targetAbi": "10.11.8.0",
+  "version": "0.1.0.0"
+}
